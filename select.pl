@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use feature 'say';
+use Cwd;
 
 my @list;
 my $files;
@@ -19,16 +20,16 @@ my @arg = @ARGV;
 
 if (scalar(@arg) > 0) {
     for (@arg) {
-        if ($_ =~ /(-a|-p)/) {
+        if ($_ =~ /\A-/) {
             if ($_ =~ /p/) {
                 $selector = "peco";
             }
             if ($_ =~ /a/) {
                 $dot = $_;
             }
-        }
-        elsif ($_ =~ /-t=(.+)/) {
-            $tail = "$1";
+            if ($_ =~ /(-redirect|-[tlrx])=(.+)/) {
+                $tail = "$2";
+            }
         }
         else {
             $command = $_;
@@ -55,6 +56,8 @@ sub main {
     @result = @$result;
 
     $files = join " ", @list;
+    $files =~ s/\(/\\(/;
+    $files =~ s/\)/\\)/;
 
     $record = `(for s in exit "do" $files; do echo \$s; done | $selector | tr -d "\n")`;
 
@@ -97,11 +100,11 @@ sub main {
     say "\nok? [y/N]";
 
     my $buffer = join " ", @result;
-    my $pwd = `pwd | tr -d "\n"`;
+    my $pwd = Cwd::getcwd();
     @path = map {"$pwd/$_"} @result;
 
     if ($tail ne "") {
-        say "$command $buffer $tail";
+        say "$command $buffer > $tail";
     }
     else {
         say "$command $buffer";
@@ -112,7 +115,7 @@ sub main {
     if ($res =~ /\A(yes|y)\z/i) {
         say "";
         if ($tail ne "") {
-            print `$command @path $tail`;
+            print `$command @path > $tail`;
         }
         else {
             print `$command @path`;
